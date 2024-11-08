@@ -1,0 +1,406 @@
+---
+title: "pipeline"
+output:
+  
+  pdf_document: default
+date: "`r format(Sys.Date(),'%B %d, %Y')`"
+always_allow_html: true
+---
+```{r, include=FALSE,  warning=FALSE, message=FALSE, comment=FALSE}
+#Make sure to have a version of LaTex installed on your computer: https://yihui.org/tinytex/
+#https://www.latex-project.org/get/
+  
+
+## Introduction Section 
+
+#Describe the data in white space
+
+## Below is an example of how to bold, italicize and change font size
+
+#This is {\bfseries bold}, {\itshape italic},{\sffamily sans serif}.
+
+#to create a page break 
+#\newpage
+```
+
+```{r setup, include=FALSE,  warning=FALSE, message=FALSE, comment=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+#Change file_path to your path 
+file_path <- "S:/AAFR/Assessment/Lisa/SampleDataforReportingPipeline.csv"
+
+read_data<- function(file_path){
+  read.csv(file_path)
+}
+
+
+
+mydata2 <- read_data(file_path)
+
+mydata2
+
+```
+
+
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE, comment=""}
+#install R packages 
+# Check if the package is installed
+if (!requireNamespace("tidyverse", quietly = TRUE)) {
+  # If not installed, install it
+  install.packages("tidyverse")
+}
+
+if (!requireNamespace("tidyr", quietly = TRUE)) {
+  # If not installed, install it
+  install.packages("tidyr")
+}
+
+if (!requireNamespace("dplyr", quietly = TRUE)) {
+  # If not installed, install it
+  install.packages("dplyr")
+}
+
+if (!requireNamespace("kableExtra", quietly = TRUE)) {
+  # If not installed, install it
+  install.packages("kableExtra")
+}
+
+
+if(!requireNamespace("kableExtra", quietly = TRUE)) {
+  install.packages("tinytex", repos='http://cran.us.r-project.org')
+  tinytex::install_tinytex(force = TRUE)
+  #the line below takes a long time to run
+  tinytex::reinstall_tinytex(repository = "illinois")
+}
+
+
+
+```
+
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+
+library(kableExtra)
+#The following object is masked from ‘package:dplyr’:group_rows
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+
+
+
+```
+
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+#remove missing data 
+mydata <- na.omit(mydata)
+
+#this is used if you want to delete any columns from the data
+mydata <- mydata %>% select(-subjectID)
+
+#checking the summary of the data 
+summary <- summary(mydata)
+
+
+
+```
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+
+#change Group to a column in your data
+groups<- mydata$Group 
+subsets <- list()
+
+
+for (group_value in unique(groups)) {
+ 
+  subset_name <- paste("Group", group_value,sep="_")
+  subsets[[subset_name]] <- mydata[groups == group_value, ]
+  
+  #can be used to see how many subsets for group 
+  #(print(paste("Subset for Group", group_value)))
+
+
+}
+
+
+```
+
+
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+#select the columns you want to include in the analysis 
+selected_data <- mydata[1:17]
+
+
+#getting the stats the data selected 
+summary_stats <- selected_data %>%
+  
+  #gather makes "wide" data longer
+  #input column name that you want to use 
+  gather(key="variable", value="value",  -Group) %>%
+  
+  #Separate splits a single column into multiple columns, can comment out if not needed 
+  # input column names that need to be separated into " ", "" and what the separating key is ex: "_"
+  separate(variable, into=c("Condition","Item"), sep="_")%>%
+  
+  #lengthens the data, increasing the number of rows and decreasing the number of columns
+  #pivot_longer(cols = starts_with("Q"), names_to = "Question") 
+  
+ #column names to group by
+   group_by(Group, Condition, Item) %>%
+     summarise(
+    N=n(),
+    Mean=mean(value),
+    SD=sd(value),
+    SE=sd(value)/sqrt(n())
+  )
+
+
+
+
+``` 
+
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE }
+
+# https://sharlagelfand.github.io/kableExtra-cookbook/how-to.html#dynamically-make-changes 
+
+
+
+
+# to make the table full width add full_width = T after font_size=15
+#you can change the add_header_above to cover specific columns EX: "Group 1 "= 3,"Group 2"= 4 
+
+table1 <- kbl(summary_stats, format = "pipe" ,font_size=15,digits = 2)  %>%
+   add_header_above(c("All Groups" = 7 ))%>%
+  
+ #this makes the first row bold 
+  row_spec(0, bold = T)%>%
+ 
+  footnote(general = "This is an example of an caption.")
+  
+ 
+
+table1
+
+```
+
+
+\newpage
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+#getting the stats of group 1 only 
+
+#can change the group number 
+summary_stats_group1 <- subsets$Group_1 %>%
+  
+  #input column name that you want to use 
+  gather(key="variable", value="value", -Group) %>%
+  
+  #input column names that need to be separated into " ", "" and what the separating key is ex: "_"
+  separate(variable, into=c("Condition","Item"), sep="_") %>%
+  
+  #column names to group by
+  group_by(Group, Condition, Item) %>%
+  summarise(
+    N=n(),
+    Mean=mean(value),
+    SD=sd(value),
+    SE=sd(value)/sqrt(n())
+  )
+
+
+
+```
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+#Table of group 1 stats only 
+
+
+table_group1 <- kbl(summary_stats_group1, format = "pipe", digits = 2, font_size=15 )%>%
+  add_header_above(c("Group 1 stats only" = 7 ))
+
+
+table_group1
+
+```
+\newpage
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+data_long <- mydata %>%
+  
+  gather(key="variable", value="value",  -Group) %>%
+  
+  # input column names that need to be separated into " ", "" and what the separating key is ex: "_" 
+  separate(variable, into=c("Condition","Item"), sep="_") 
+
+```
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+
+#use if you want to change x variable name 
+new_x_variable<- c("A","B","c","D")
+
+plot1<- ggplot(data_long, aes(x=Item, y=value))  +
+  
+   #change the fill = "" to a column name 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", aes(fill=Condition), colour="black") +
+  
+  #change the group = "" to the column you want to group by 
+  stat_summary(fun.data = mean_se, geom = "errorbar", width=.2, aes(group=Condition), position=position_dodge(.9)) +
+  
+  #change what color you want to fill in boxes with
+  scale_fill_manual(values=c("white","grey")) +
+  
+  theme(panel.background = element_blank())+
+  theme(axis.line=element_line(color="black",size =0.5))+
+  
+  #this changes the y scale and interval 
+  scale_y_continuous(breaks = seq(0,6, by =1))+
+  
+  #this changes the title of the plot
+  ggtitle("Group 1 and Group 2")+
+  
+  #this changes the x axis variable names 
+  scale_x_discrete(labels = new_x_variable)+
+  
+    #this changes the color of the x axis 
+  theme(axis.title.x = element_text(colour = "black"),
+        
+        #this changes the color of the y axis 
+          axis.title.y = element_text(colour = "black"),
+        
+        #this changes the color of the Title 
+          text=element_text(color="black"),
+        
+        #this changes the color of the ticks on both x and y axis 
+        axis.text=element_text(color="black"))+
+  
+  #this changes the y axis label
+  labs(y="Mean Value with SE")
+
+plot1
+```
+
+\newpage
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+#getting the data of group 1
+data_long1 <- subsets$Group_1 %>%
+ 
+  #gather makes "wide" data longer
+  #input column name that you want to use 
+  gather(key="variable", value="value",-Group) %>%
+  
+    # input column names that need to be separated into " ", "" and what the separating key is ex: "_"
+  separate(variable,into=c("Condition","Item"),sep="_") 
+
+```
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+
+#use if you want to change x variable name 
+new_x_variable<- c("A","B","c","D")
+
+#change the x variable
+plot_group1 <- ggplot(data_long1, aes(x=Item, y=value)) +
+  
+  #change the fill = "" to a column name 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", aes(fill=Condition), colour="black") +
+  
+  #change the group = "" to the column you want to group by 
+  stat_summary(fun.data = mean_se, geom = "errorbar", width=.2, aes(group=Condition), position=position_dodge(.9)) +
+  
+  theme(panel.background = element_blank())+
+  
+  #the color and size of the axis line can be changed below
+  theme(axis.line=element_line(color="black",size =0.5))+
+  
+  #change what color you want to fill in boxes with 
+  scale_fill_manual(values=c("white","grey")) +
+  
+  #change the y scale and interval 
+  scale_y_continuous(breaks = seq(0,6, by =1))+
+  
+  #the title of the plot 
+  ggtitle("Group 1 Only")+
+  
+  #this changes the x axis variable names, can comment out if not needed 
+  scale_x_discrete(labels = new_x_variable)+
+  
+  #this changes the color of the x axis 
+  theme(axis.title.x = element_text(colour = "black"),
+        
+        #this changes the color of the y axis 
+          axis.title.y = element_text(colour = "black"),
+        
+        #this changes the color of the Title 
+          text=element_text(color="black"),
+        
+        #this changes the color of the ticks on both x and y axis 
+        axis.text=element_text(color="black"))+
+  
+ 
+  
+  #The y axis label 
+  labs(y="Mean Value with SE")
+  
+plot_group1
+
+```
+\newpage
+```{r, warning=FALSE, message=FALSE}
+
+#use if you want to change x variable name 
+new_x_variable<- c("A","B","c","D")
+plot_horizontal <- ggplot(data_long1 , aes(x=Item, y=value))+
+ #change the fill = "" to a column name 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", aes(fill=Condition), colour="black") +
+  
+  #change the group = "" to the column you want to group by, can remove if you don't want error bar
+  stat_summary(fun.data = mean_se, geom = "errorbar", width=.2, aes(group=Condition), position=position_dodge(.9)) +
+  
+  coord_flip()+
+  
+  theme(panel.background = element_blank())+
+  
+  #the color and size of the axis line can be changed below
+  theme(axis.line=element_line(color="black",size =0.5))+
+  
+  #change what color you want to fill in boxes with 
+  scale_fill_manual(values=c("white","grey")) +
+  
+  #change the y scale and interval 
+  scale_y_continuous(breaks = seq(0,6, by =1))+
+  
+  #the title of the plot 
+  ggtitle("Group 1 & 2")+
+  
+  #this changes the x axis variable names, can comment out if not needed 
+ # scale_x_discrete(labels = new_x_variable)+
+  
+  #this changes the color of the x axis 
+  theme(axis.title.x = element_text(colour = "black"),
+        
+        #this changes the color of the y axis 
+          axis.title.y = element_text(colour = "black"),
+        
+        #this changes the color of the Title 
+          text=element_text(color="black"),
+        
+        #this changes the color of the ticks on both x and y axis 
+        axis.text=element_text(color="black"))+
+  
+ 
+  
+  #The y axis label 
+  labs(y="Mean Value with SE")
+  
+
+plot_horizontal 
+
+```
