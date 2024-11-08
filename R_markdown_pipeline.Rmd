@@ -27,7 +27,7 @@ always_allow_html: true
 knitr::opts_chunk$set(echo = FALSE)
 
 #Change file_path to your path 
-file_path <- "S:/AAFR/Assessment/Lisa/SampleDataforReportingPipeline.csv"
+file_path <- " "
 
 read_data<- function(file_path){
   read.csv(file_path)
